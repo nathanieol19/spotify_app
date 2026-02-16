@@ -27,6 +27,7 @@ app.get('/login', (req, res) => {
 
 app.get('/callback', async (req, res) => {
   const code = req.query.code;
+  
 
 
   try {
@@ -49,12 +50,48 @@ app.get('/callback', async (req, res) => {
     );
 
     const access_token = response.data.access_token;
+    const refresh_token = response.data.refresh_token;
 
-    res.redirect(`http://localhost:5173/?token=${access_token}`);
+    res.redirect(`http://localhost:5173/?token=${access_token}&refresh_token=${refresh_token}`);
   } catch (err) {
     console.error(err.response?.data || err.message);
     res.send('Error getting token');
   }
+  console.log('Received code:', code);
+  console.log('response:', res, response.data);
+});
+
+app.get('/refresh_token', async(req, res) =>{
+    const refresh_token = req.query.refresh_token;
+
+    if (!refresh_token){
+        return res.status(400).send('Missing refresh token!');
+    }
+    
+    try{
+        const response = await axios.post(
+            'https://accounts.spotify.com/api/token',
+        querystring.stringify({
+            grant_type: 'refresh_token',
+            refresh_token,
+            
+        }),
+        {
+            headers: {
+                'Content-Type': 'application/x-www-form-urlencoded',
+            },
+            auth: {
+                username: CLIENT_ID,
+                password: CLIENT_SECRET,
+            },
+        })
+        res.json({
+            access_token: response.data.access_token,
+        });
+    } catch (err) {
+        console.error(err.response?.data || err.message);
+        res.status(500).send('Error refreshing token');
+    }
 });
 
 const PORT = 8888;
